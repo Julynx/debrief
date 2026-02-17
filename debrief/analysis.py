@@ -1,19 +1,35 @@
+"""Analyzes Python codebase to extract definitions and imports."""
+
 import ast
 import os
 
+from .constants import MAX_CLASS_METHODS
 from .ignore import is_ignored
+from .resolve import format_fenced_block
 
 
 class Analyzer:
-    def __init__(self, root, linter, patterns):
+    """Analyzes the Python codebase to extract definitions and imports."""
+
+    def __init__(self, root, linter, patterns, include_docstrings=True):
+        """Initializes the Analyzer.
+
+        Args:
+            root: Project root path.
+            linter: ProjectLinter instance.
+            patterns: List of gitignore patterns.
+            include_docstrings: Whether to include docstrings in the output.
+        """
         self.root = os.path.abspath(root)
         self.linter = linter
         self.patterns = patterns
+        self.include_docstrings = include_docstrings
         self.definitions = []
         # Maps relative file path -> set of imported relative file paths
         self.import_graph = {}
 
     def get_arg_str(self, arg):
+        """Formats an argument node into a string representation."""
         sig = arg.arg
         if arg.annotation:
             try:
@@ -34,9 +50,15 @@ class Analyzer:
         return lines
 
     def _resolve_import(self, current_file_abs, module, level=0):
-        """
-        Resolves an AST import node to a potential local file path.
-        Returns the relative path from self.root if found, else None.
+        """Resolves an AST import node to a potential local file path.
+
+        Args:
+            current_file_abs: Absolute path of the current file.
+            module: The module name being imported.
+            level: The relative import level (0 for absolute).
+
+        Returns:
+            The relative path from self.root if found, else None.
         """
         if module is None:
             return None
@@ -51,13 +73,13 @@ class Analyzer:
         parts = module.split(".")
 
         # Candidate 1: module.py
-        candidate_py = os.path.join(base_dir, *parts) + ".py"
+        candidate_path = os.path.join(base_dir, *parts) + ".py"
         # Candidate 2: module/__init__.py
         candidate_pkg = os.path.join(base_dir, *parts, "__init__.py")
 
         target = None
-        if os.path.isfile(candidate_py):
-            target = candidate_py
+        if os.path.isfile(candidate_path):
+            target = candidate_path
         elif os.path.isfile(candidate_pkg):
             target = candidate_pkg
 
@@ -67,11 +89,14 @@ class Analyzer:
         return None
 
     def scan(self):
+        """Scans the project directory for Python files and analyzes them."""
         for root, dirs, files in os.walk(self.root):
             dirs[:] = [
-                d
-                for d in dirs
-                if not is_ignored(os.path.join(root, d), self.root, self.patterns)
+                dir_name
+                for dir_name in dirs
+                if not is_ignored(
+                    os.path.join(root, dir_name), self.root, self.patterns
+                )
             ]
             for file in files:
                 if file.endswith(".py"):
@@ -81,7 +106,7 @@ class Analyzer:
                     rel = os.path.relpath(full, self.root)
                     self.analyze_file(full, rel)
 
-    def _handle_import(self, node, path, rel_path, file_defs):
+    def _handle_import(self, node, path, rel_path):
         if isinstance(node, ast.Import):
             for alias in node.names:
                 resolved = self._resolve_import(path, alias.name, level=0)
@@ -95,33 +120,44 @@ class Analyzer:
 
     def _handle_class(self, node, file_defs):
         self.linter.track_doc(node)
-        bases = [ast.unparse(b) for b in node.bases]
+        bases = [ast.unparse(base_class) for base_class in node.bases]
         base_str = f"({', '.join(bases)})" if bases else ""
         file_defs.append(f"- class {node.name}{base_str}")
-        file_defs.extend(self._format_docstring(node, 2))
+        if self.include_docstrings:
+            file_defs.extend(self._format_docstring(node, 2))
 
-        m_count = 0
+        method_count = 0
         for item in node.body:
             if isinstance(item, ast.FunctionDef) and not item.name.startswith("_"):
-                if m_count < 5:
+                if method_count < MAX_CLASS_METHODS:
                     self.linter.track_doc(item)
-                    args = [self.get_arg_str(a) for a in item.args.args]
+                    args = [self.get_arg_str(arg) for arg in item.args.args]
                     file_defs.append(f"  - def {item.name}({', '.join(args)})")
-                    file_defs.extend(self._format_docstring(item, 4))
-                    m_count += 1
+                    if self.include_docstrings:
+                        file_defs.extend(self._format_docstring(item, 4))
+                    method_count += 1
 
     def _handle_function(self, node, file_defs):
         if not node.name.startswith("_"):
             self.linter.track_doc(node)
-            args = [self.get_arg_str(a) for a in node.args.args]
+            args = [self.get_arg_str(arg) for arg in node.args.args]
             ret = f" -> {ast.unparse(node.returns)}" if node.returns else ""
             file_defs.append(f"- def {node.name}({', '.join(args)}){ret}")
-            file_defs.extend(self._format_docstring(node, 2))
+            if self.include_docstrings:
+                file_defs.extend(self._format_docstring(node, 2))
 
     def analyze_file(self, path, rel_path):
+        """Parses and analyzes a single Python file.
+
+        Extracts imports, classes, and functions, and records definitions.
+
+        Args:
+            path: Absolute path to the file.
+            rel_path: Relative path from the project root.
+        """
         try:
-            with open(path, "r", encoding="utf-8") as f:
-                tree = ast.parse(f.read())
+            with open(path, "r", encoding="utf-8") as file_obj:
+                tree = ast.parse(file_obj.read())
         except Exception:
             return
 
@@ -134,7 +170,7 @@ class Analyzer:
         for node in tree.body:
             # --- 1. Handle Imports ---
             if isinstance(node, (ast.Import, ast.ImportFrom)):
-                self._handle_import(node, path, rel_path, file_defs)
+                self._handle_import(node, path, rel_path)
 
             # --- 2. Handle Classes ---
             elif isinstance(node, ast.ClassDef):
@@ -145,15 +181,18 @@ class Analyzer:
                 self._handle_function(node, file_defs)
 
         if file_defs:
-            self.definitions.append(f"### {rel_path}\n")
-            self.definitions.append("```text")
-            self.definitions.extend(file_defs)
-            self.definitions.append("```\n")
+            self.definitions.append(f"\n### {rel_path}\n\n")
+            block_content = "\n".join(file_defs)
+            self.definitions.append(format_fenced_block(block_content, "text"))
+            self.definitions.append("")
 
     def get_import_tree(self):
-        """
-        Generates a string representation of the local import tree.
+        """Generates a string representation of the local import tree.
+
         Subtrees that have been printed previously are abbreviated with (...).
+
+        Returns:
+            A string representing the import tree.
         """
         if not self.import_graph:
             return "No imports found."
@@ -164,7 +203,13 @@ class Analyzer:
             imported_files.update(imports)
 
         # Identify 'roots': files present in graph but not imported by others
-        roots = sorted([f for f in self.import_graph if f not in imported_files])
+        roots = sorted(
+            [
+                root_file
+                for root_file in self.import_graph
+                if root_file not in imported_files
+            ]
+        )
 
         # Fallback if circular dependencies leave no roots
         if not roots:

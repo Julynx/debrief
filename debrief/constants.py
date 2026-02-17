@@ -1,3 +1,5 @@
+"""Project-wide constants for debrief."""
+
 DEFAULT_IGNORE = [
     ".git",
     ".github",
@@ -17,3 +19,7 @@ DEFAULT_IGNORE = [
     ".mypy_cache",
     ".pytest_cache",
 ]
+
+DOC_THRESHOLD_OK = 80
+DOC_THRESHOLD_WARN = 40
+MAX_CLASS_METHODS = 5

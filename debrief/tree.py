@@ -1,9 +1,21 @@
+"""Directory tree generation utilities."""
+
 import os
 
 from .ignore import is_ignored
 
 
 def generate_tree_at_depth(root_path, max_depth, patterns):
+    """Generates a directory tree string up to a specific depth.
+
+    Args:
+        root_path: The root directory to start the tree from.
+        max_depth: The maximum depth to traverse.
+        patterns: List of gitignore patterns to exclude.
+
+    Returns:
+        A string representing the directory tree.
+    """
     lines = []
 
     def walk(path, current_depth):
@@ -39,13 +51,26 @@ def generate_tree_at_depth(root_path, max_depth, patterns):
 
 
 def get_adaptive_tree(root_path, max_lines, patterns):
+    """Generates a directory tree that fits within a line budget.
+
+    Iteratively increases depth until the tree exceeds max_lines,
+    then returns the best fitting previous version.
+
+    Args:
+        root_path: The root directory.
+        max_lines: The maximum number of lines allowed for the tree.
+        patterns: List of gitignore patterns.
+
+    Returns:
+        The generated tree string.
+    """
     best_tree = ""
     last_count = 0
     for depth in range(1, 10):
         tree = generate_tree_at_depth(root_path, depth, patterns)
         count = len(tree.splitlines())
         if count > max_lines:
-            if last_count < (max_lines * 0.2) and last_count > 0:
+            if 0 < last_count < (max_lines * 0.2):
                 return tree
             if depth == 1:
                 return tree

@@ -1,15 +1,37 @@
 # BRIEF: debrief
 
+> Dynamically generated BRIEF.md summaries for your Python projects, to make them accesible to new contributors or coding agents.
+
 ## 1. Overview (README)
 
 ```markdown
+# debrief: Project Summarizer
 
+`debrief` generates a comprehensive `BRIEF.md` file designed to provide new contributors or coding agents with a high-density overview of a Python project.
+
+## Installation
+
+'''bash
+pip install debrief
+'''
+
+## Usage
+
+'''bash
+debrief [path] [--output BRIEF.md]
+'''
+
+### Arguments
+
+| Argument            | Description                                | Default    |
+| :------------------ | :----------------------------------------- | :--------- |
+... (truncated) [Read more](file:///D:/_DISK_/_Documentos_/Mis_repositorios/debrief/README.md)
 ```
 
 ## 2. Dependencies
 
 ```text
-_No requirements.txt found._
+_No dependencies found._
 ```
 
 ## 3. Directory Structure
@@ -40,11 +62,15 @@ debrief/
 
 - debrief\main.py
   - debrief\analysis.py
+    - debrief\constants.py
     - debrief\ignore.py
-      - debrief\constants.py
+      - debrief\constants.py (...)
+    - debrief\resolve.py
   - debrief\ignore.py (...)
   - debrief\linting.py
-  - debrief\resolve.py
+    - debrief\constants.py (...)
+    - debrief\resolve.py (...)
+  - debrief\resolve.py (...)
   - debrief\tree.py
     - debrief\ignore.py (...)
 ```
@@ -59,26 +85,12 @@ debrief/
   - def scan(self)
   - def analyze_file(self, path, rel_path)
   - def get_import_tree(self)
-    """
-    Generates a string representation of the local import tree.
-    Subtrees that have been printed previously are abbreviated with (...).
-    """
 ```
 
 ### debrief\ignore.py
 
 ```text
 - def load_gitignore(root_path)
-  """
-  Loads the .gitignore file from the root path
-  
-  Args:
-      root_path (Path | str): The root path of the project.
-  
-  Returns:
-      patterns (list): A list of patterns read from the
-        .gitignore file
-  """
 - def is_ignored(path, root_path, patterns)
 ```
 
@@ -86,17 +98,7 @@ debrief/
 
 ```text
 - class ProjectLinter
-  """
-  Docstring for ProjectLinter
-  """
   - def log(self, level, msg)
-    """
-    Docstring for log
-    
-    :param self: Description
-    :param level: Description
-    :param msg: Description
-    """
   - def find_readme(self)
   - def check_metadata(self)
   - def track_doc(self, node)
@@ -114,39 +116,14 @@ debrief/
 
 ```text
 - def log(level: str, msg: str) -> None
-  """
-  Log a message to stderr with an icon.
-  
-  :param level: keys: "FAIL", "WARN", "OK"
-  :param msg: Message to log
-  """
 - def resolve_readme(root: str) -> Optional[str]
-  """
-  Find the README file in the project looking at standard locations.
-  Logs success, warnings, or failures.
-  
-  :param root: Project root directory
-  :return: Absolute path to README or None
-  """
 - def resolve_pyproject(root: str) -> Optional[str]
-  """
-  Find and validate pyproject.toml.
-  
-  :param root: Project root directory
-  :return: Absolute path to pyproject.toml or None
-  """
 - def resolve_requirements(root: str) -> Optional[str]
-  """
-  Find requirements.txt.
-  
-  :param root: Project root directory
-  :return: Absolute path to requirements.txt or None
-  """
 - def check_dependencies(root: str) -> None
-  """
-  Check if either pyproject.toml or requirements.txt exists.
-  Logs WARN if neither is found.
-  """
+- def get_project_description(root: str) -> Optional[str]
+- def get_project_dependencies(root: str) -> List[str]
+- def truncate_line(line: str, max_chars: int) -> str
+- def format_fenced_block(content: str, lang: str) -> str
 ```
 
 ### debrief\tree.py
