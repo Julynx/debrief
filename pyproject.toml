@@ -1,6 +1,6 @@
 [project]
 name = "debrief"
-version = "0.8.2"
+version = "0.8.3"
 description = "Dynamically generated BRIEF.md summaries for your Python projects, to make them accessible to new contributors or coding agents."
 readme = "README.md"
 requires-python = ">=3.11"

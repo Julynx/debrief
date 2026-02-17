@@ -63,13 +63,13 @@ debrief/
   - debrief\analysis.py
     - debrief\constants.py
     - debrief\ignore.py
-      - debrief\constants.py (...)
+      - debrief\constants.py
     - debrief\resolve.py
   - debrief\ignore.py (...)
   - debrief\linting.py
-    - debrief\constants.py (...)
-    - debrief\resolve.py (...)
-  - debrief\resolve.py (...)
+    - debrief\constants.py
+    - debrief\resolve.py
+  - debrief\resolve.py
   - debrief\tree.py
     - debrief\ignore.py (...)
 ```
@@ -89,7 +89,7 @@ debrief/
 ### debrief\ignore.py
 
 ```text
-- def load_gitignore(root_path)
+- def load_gitignore(root_path, extra_patterns)
 - def is_ignored(path, root_path, patterns)
 ```
 

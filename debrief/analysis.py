@@ -179,6 +179,37 @@ class Analyzer:
             self.definitions.append(format_fenced_block(block_content, "text"))
             self.definitions.append("")
 
+    def _find_root_files(self):
+        """Finds root files that are not imported by any other file.
+
+        Returns:
+            List of root file paths sorted alphabetically.
+        """
+        imported_files = set()
+        for imports in self.import_graph.values():
+            imported_files.update(imports)
+
+        roots = [
+            file_object
+            for file_object in self.import_graph
+            if file_object not in imported_files
+        ]
+        return sorted(roots) if roots else sorted(self.import_graph.keys())
+
+    def _format_visited_node(self, file_node, prefix, children):
+        """Formats a previously visited node with or without ellipsis.
+
+        Args:
+            file_node: The file node to format.
+            prefix: The indentation prefix.
+            children: List of child nodes.
+
+        Returns:
+            Formatted string for the node.
+        """
+        suffix = " (...)" if children else ""
+        return f"{prefix}- {file_node}{suffix}"
+
     def get_import_tree(self):
         """Generates a string representation of the local import tree.
 
@@ -190,23 +221,8 @@ class Analyzer:
         if not self.import_graph:
             return "No imports found."
 
-        imported_files = set()
-        for imports in self.import_graph.values():
-            imported_files.update(imports)
-
-        roots = sorted(
-            [
-                root_file
-                for root_file in self.import_graph
-                if root_file not in imported_files
-            ]
-        )
-
-        if not roots:
-            roots = sorted(self.import_graph.keys())
-
+        roots = self._find_root_files()
         output = []
-
         globally_visited = set()
         current_path = set()
 
@@ -215,15 +231,14 @@ class Analyzer:
                 output.append(f"{prefix}- {file_node} (cycle)")
                 return
 
+            children = sorted(self.import_graph.get(file_node, []))
             if file_node in globally_visited:
-                output.append(f"{prefix}- {file_node} (...)")
+                output.append(self._format_visited_node(file_node, prefix, children))
                 return
 
             output.append(f"{prefix}- {file_node}")
-
             globally_visited.add(file_node)
 
-            children = sorted(self.import_graph.get(file_node, []))
             if children:
                 current_path.add(file_node)
                 for child in children:
