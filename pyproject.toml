@@ -1,16 +1,17 @@
 [project]
 name = "debrief"
 version = "0.1.0"
-description = "Dynamically generated BRIEF.md summaries for your Python projects, to make them accesible to new contributors or coding agents."
+description = "Dynamically generated BRIEF.md summaries for your Python projects, to make them accessible to new contributors or coding agents."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = []
 
+[project.urls]
+Repository = "https://github.com/your-username/debrief"
+Homepage = "https://github.com/your-username/debrief"
+
 [dependency-groups]
-dev = [
-    "pylint>=4.0.4",
-    "ruff>=0.15.1",
-]
+dev = ["pylint>=4.0.4", "ruff>=0.15.1"]
 
 [build-system]
 requires = ["hatchling"]

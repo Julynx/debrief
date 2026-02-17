@@ -25,6 +25,7 @@ debrief [path] [--output BRIEF.md]
 | `--max-deps`        | Max lines for dependencies list.           | `15`       |
 | `--max-imports`     | Max lines for Import Tree.                 | `50`       |
 | `--max-definitions` | Max lines for Module Definitions.          | `200`      |
+| `--no-docstrings`   | Omit docstrings from the output.           | `False`    |
 
 ## Features
 
