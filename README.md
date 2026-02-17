@@ -27,6 +27,7 @@ debrief [path] [--output BRIEF.md]
 | `--max-imports`        | Max lines for Import Tree.                 | `50`            |
 | `--max-definitions`    | Max lines for Module Definitions.          | `200`           |
 | `--include-docstrings` | Include docstrings in the output.          | `False`         |
+| `--exclude`            | Additional patterns to exclude.            | None            |
 
 ## Features
 

@@ -60,6 +60,11 @@ def parse_arguments():
         default=None,
         help="Max items at same level in tree (default: tree_budget/3)",
     )
+    parser.add_argument(
+        "--exclude",
+        action="append",
+        help="Additional patterns to exclude (can be used multiple times)",
+    )
 
     return parser.parse_args()
 
@@ -72,7 +77,7 @@ def main():
     """
     args = parse_arguments()
     root = os.path.abspath(args.path)
-    patterns = load_gitignore(root)
+    patterns = load_gitignore(root, args.exclude)
 
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 

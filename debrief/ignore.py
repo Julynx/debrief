@@ -6,11 +6,12 @@ import os
 from .constants import DEFAULT_IGNORE
 
 
-def load_gitignore(root_path):
+def load_gitignore(root_path, extra_patterns=None):
     """Loads the .gitignore file from the root path.
 
     Args:
         root_path: The root path of the project.
+        extra_patterns: Optional list of additional patterns to exclude.
 
     Returns:
         List[str]: A list of patterns read from the .gitignore file.
@@ -26,6 +27,8 @@ def load_gitignore(root_path):
                         patterns.add(line)
         except Exception:
             pass
+    if extra_patterns:
+        patterns.update(extra_patterns)
     return list(patterns)
 
 
