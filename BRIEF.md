@@ -23,9 +23,8 @@ debrief [path] [--output BRIEF.md]
 
 ### Arguments
 
-| Argument | Description | Default |
-| :------- | :---------- | :------ |
-
+| Argument            | Description                                | Default    |
+| :------------------ | :----------------------------------------- | :--------- |
 ... (truncated) [Read more](file:///D:/_DISK_/_Documentos_/Mis_repositorios/debrief/README.md)
 ```
 
@@ -51,7 +50,6 @@ debrief/
 ├── .gitignore
 ├── .python-version
 ├── README.md
-├── TODO.md
 ├── pyproject.toml
 └── uv.lock
 ```
@@ -96,9 +94,9 @@ debrief/
   - def analyze_file(self, path, rel_path)
     """
     Parses and analyzes a single Python file.
-
+    
     Extracts imports, classes, and functions, and records definitions.
-
+    
     Args:
         path: Absolute path to the file.
         rel_path: Relative path from the project root.
@@ -106,9 +104,9 @@ debrief/
   - def get_import_tree(self)
     """
     Generates a string representation of the local import tree.
-
+    
     Subtrees that have been printed previously are abbreviated with (...).
-
+    
     Returns:
         A string representing the import tree.
     """
@@ -120,22 +118,22 @@ debrief/
 - def load_gitignore(root_path)
   """
   Loads the .gitignore file from the root path.
-
+  
   Args:
       root_path: The root path of the project.
-
+  
   Returns:
       List[str]: A list of patterns read from the .gitignore file.
   """
 - def is_ignored(path, root_path, patterns)
   """
   Checks if a file path matches any of the ignore patterns.
-
+  
   Args:
       path: Path to check.
       root_path: Project root directory.
       patterns: List of ignore patterns.
-
+  
   Returns:
       True if the path should be ignored, False otherwise.
   """
@@ -155,7 +153,7 @@ debrief/
   - def track_doc(self, node)
     """
     Updates docstring statistics for a given AST node.
-
+    
     Args:
         node: The AST node (FunctionDef, ClassDef, etc).
     """
@@ -171,14 +169,14 @@ debrief/
 - def parse_arguments()
   """
   Parses command-line arguments.
-
+  
   Returns:
       argparse.Namespace: The parsed arguments.
   """
 - def main()
   """
   Main entry point for the debrief tool.
-
+  
   Scans the project, resolves readme and requirements, generates a tree,
   analyzes the codebase, and writes a BRIEF.md file.
   """
@@ -190,7 +188,7 @@ debrief/
 - def log(level: str, msg: str) -> None
   """
   Logs a message with an icon based on the severity level.
-
+  
   Args:
       level: The severity level ("FAIL", "WARN", "OK").
       msg: The message to log.
@@ -198,84 +196,83 @@ debrief/
 - def resolve_readme(root: str) -> Optional[str]
   """
   Finds the README file in the project looking at standard locations.
-
+  
   Logs success, warnings, or failures.
-
+  
   Args:
       root: Project root directory.
-
+  
   Returns:
       Absolute path to README or None.
   """
 - def resolve_pyproject(root: str) -> Optional[str]
   """
   Finds and validates pyproject.toml.
-
+  
   Args:
       root: Project root directory.
-
+  
   Returns:
       Absolute path to pyproject.toml or None.
   """
 - def resolve_requirements(root: str) -> Optional[str]
   """
   Finds requirements.txt.
-
+  
   Args:
       root: Project root directory.
-
+  
   Returns:
       Absolute path to requirements.txt or None.
   """
 - def check_dependencies(root: str) -> None
   """
   Checks if either pyproject.toml or requirements.txt exists.
-
+  
   Logs WARN if neither is found.
-
+  
   Args:
       root: Project root directory.
   """
 - def get_project_description(root: str) -> Optional[str]
   """
   Extracts the project description from pyproject.toml.
-
+  
   Args:
       root: Project root directory.
-
+  
   Returns:
       The project description string, or None if not found/error.
   """
 - def get_project_dependencies(root: str) -> List[str]
   """
   Extracts project dependencies from pyproject.toml or requirements.txt.
-
+  
   Args:
       root: Project root directory.
-
+  
   Returns:
       A list of dependency strings.
   """
 - def truncate_line(line: str, max_chars: int) -> str
   """
   Truncates a line to a maximum number of characters.
-
+  
   Args:
       line: The line to truncate.
       max_chars: The maximum number of characters allowed.
-
+  
   Returns:
       The truncated line with an ellipsis if it exceeded the limit.
   """
 - def format_fenced_block(content: str, lang: str) -> str
   """
   Formats content into a fenced code block, replacing inner backticks.
-
+  
   Replaces ''''' with "'''" inside the content to prevent breaking the
   outer markdown block.
-
+  
   Args:
       content: The content to wrap in a fenced block.
       lang: The language identifier for the block.
 ... (truncated)
-```

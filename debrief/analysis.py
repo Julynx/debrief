@@ -25,7 +25,6 @@ class Analyzer:
         self.patterns = patterns
         self.include_docstrings = include_docstrings
         self.definitions = []
-        # Maps relative file path -> set of imported relative file paths
         self.import_graph = {}
 
     def get_arg_str(self, arg):
@@ -72,9 +71,7 @@ class Analyzer:
 
         parts = module.split(".")
 
-        # Candidate 1: module.py
         candidate_path = os.path.join(base_dir, *parts) + ".py"
-        # Candidate 2: module/__init__.py
         candidate_pkg = os.path.join(base_dir, *parts, "__init__.py")
 
         target = None
@@ -163,20 +160,16 @@ class Analyzer:
 
         file_defs = []
 
-        # Initialize import set for this file
         if rel_path not in self.import_graph:
             self.import_graph[rel_path] = set()
 
         for node in tree.body:
-            # --- 1. Handle Imports ---
             if isinstance(node, (ast.Import, ast.ImportFrom)):
                 self._handle_import(node, path, rel_path)
 
-            # --- 2. Handle Classes ---
             elif isinstance(node, ast.ClassDef):
                 self._handle_class(node, file_defs)
 
-            # --- 3. Handle Top-Level Functions ---
             elif isinstance(node, ast.FunctionDef):
                 self._handle_function(node, file_defs)
 
@@ -197,12 +190,10 @@ class Analyzer:
         if not self.import_graph:
             return "No imports found."
 
-        # Find all files that are imported by at least one other file
         imported_files = set()
         for imports in self.import_graph.values():
             imported_files.update(imports)
 
-        # Identify 'roots': files present in graph but not imported by others
         roots = sorted(
             [
                 root_file
@@ -211,32 +202,25 @@ class Analyzer:
             ]
         )
 
-        # Fallback if circular dependencies leave no roots
         if not roots:
             roots = sorted(self.import_graph.keys())
 
         output = []
 
-        # Track which nodes have been fully expanded in the output already
         globally_visited = set()
-        # Track current recursion path to detect immediate cycles
         current_path = set()
 
         def _build_tree(file_node, prefix=""):
-            # Check for immediate recursion cycle
             if file_node in current_path:
                 output.append(f"{prefix}- {file_node} (cycle)")
                 return
 
-            # Check if we have already printed the tree for this node elsewhere
             if file_node in globally_visited:
                 output.append(f"{prefix}- {file_node} (...)")
                 return
 
-            # Print the node
             output.append(f"{prefix}- {file_node}")
 
-            # Mark as visited globally so future references are abbreviated
             globally_visited.add(file_node)
 
             children = sorted(self.import_graph.get(file_node, []))

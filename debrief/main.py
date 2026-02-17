@@ -27,7 +27,6 @@ def parse_arguments():
     parser.add_argument("path", nargs="?", default=".", help="Project root path")
     parser.add_argument("-o", "--output", default="BRIEF.md", help="Output filename")
 
-    # Adaptive Limits
     parser.add_argument(
         "--tree-budget",
         type=int,
@@ -50,7 +49,6 @@ def parse_arguments():
         help="Max lines for Module Definitions",
     )
 
-    # Output Options
     parser.add_argument(
         "--no-docstrings",
         action="store_true",
@@ -92,7 +90,6 @@ def main():
     deps_content = "_No dependencies found._"
     deps = get_project_dependencies(root)
     if deps:
-        # Resolve dependency file path for "Read more" link
         dep_file_path = (
             "pyproject.toml"
             if os.path.exists(os.path.join(root, "pyproject.toml"))
@@ -124,7 +121,6 @@ def main():
         import_tree += "\n... (truncated)"
 
     def_lines = analyzer.definitions
-    # Analyzer stores blocks of text, split them to enforce line limit
     split_defs = []
     for block in def_lines:
         split_defs.extend(block.splitlines())

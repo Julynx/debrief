@@ -153,7 +153,6 @@ def get_project_dependencies(root: str) -> List[str]:
     Returns:
         A list of dependency strings.
     """
-    # 1. Try pyproject.toml
     toml_path = os.path.join(root, "pyproject.toml")
     if os.path.exists(toml_path):
         try:
@@ -163,9 +162,8 @@ def get_project_dependencies(root: str) -> List[str]:
                 if isinstance(deps, list):
                     return deps
         except Exception:
-            pass  # Fallback to requirements.txt
+            pass
 
-    # 2. Try requirements.txt
     req_path = os.path.join(root, "requirements.txt")
     if os.path.exists(req_path):
         try:
