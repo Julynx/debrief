@@ -81,6 +81,43 @@ class Analyzer:
                     rel = os.path.relpath(full, self.root)
                     self.analyze_file(full, rel)
 
+    def _handle_import(self, node, path, rel_path, file_defs):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                resolved = self._resolve_import(path, alias.name, level=0)
+                if resolved:
+                    self.import_graph[rel_path].add(resolved)
+        elif isinstance(node, ast.ImportFrom):
+            mod_name = node.module if node.module else ""
+            resolved = self._resolve_import(path, mod_name, level=node.level)
+            if resolved:
+                self.import_graph[rel_path].add(resolved)
+
+    def _handle_class(self, node, file_defs):
+        self.linter.track_doc(node)
+        bases = [ast.unparse(b) for b in node.bases]
+        base_str = f"({', '.join(bases)})" if bases else ""
+        file_defs.append(f"- class {node.name}{base_str}")
+        file_defs.extend(self._format_docstring(node, 2))
+
+        m_count = 0
+        for item in node.body:
+            if isinstance(item, ast.FunctionDef) and not item.name.startswith("_"):
+                if m_count < 5:
+                    self.linter.track_doc(item)
+                    args = [self.get_arg_str(a) for a in item.args.args]
+                    file_defs.append(f"  - def {item.name}({', '.join(args)})")
+                    file_defs.extend(self._format_docstring(item, 4))
+                    m_count += 1
+
+    def _handle_function(self, node, file_defs):
+        if not node.name.startswith("_"):
+            self.linter.track_doc(node)
+            args = [self.get_arg_str(a) for a in node.args.args]
+            ret = f" -> {ast.unparse(node.returns)}" if node.returns else ""
+            file_defs.append(f"- def {node.name}({', '.join(args)}){ret}")
+            file_defs.extend(self._format_docstring(node, 2))
+
     def analyze_file(self, path, rel_path):
         try:
             with open(path, "r", encoding="utf-8") as f:
@@ -96,46 +133,16 @@ class Analyzer:
 
         for node in tree.body:
             # --- 1. Handle Imports ---
-            if isinstance(node, ast.Import):
-                for alias in node.names:
-                    resolved = self._resolve_import(path, alias.name, level=0)
-                    if resolved:
-                        self.import_graph[rel_path].add(resolved)
-
-            elif isinstance(node, ast.ImportFrom):
-                mod_name = node.module if node.module else ""
-                resolved = self._resolve_import(path, mod_name, level=node.level)
-                if resolved:
-                    self.import_graph[rel_path].add(resolved)
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                self._handle_import(node, path, rel_path, file_defs)
 
             # --- 2. Handle Classes ---
             elif isinstance(node, ast.ClassDef):
-                self.linter.track_doc(node)
-                bases = [ast.unparse(b) for b in node.bases]
-                base_str = f"({', '.join(bases)})" if bases else ""
-                file_defs.append(f"- class {node.name}{base_str}")
-                file_defs.extend(self._format_docstring(node, 2))
-
-                m_count = 0
-                for item in node.body:
-                    if isinstance(item, ast.FunctionDef) and not item.name.startswith(
-                        "_"
-                    ):
-                        if m_count < 5:
-                            self.linter.track_doc(item)
-                            args = [self.get_arg_str(a) for a in item.args.args]
-                            file_defs.append(f"  - def {item.name}({', '.join(args)})")
-                            file_defs.extend(self._format_docstring(item, 4))
-                            m_count += 1
+                self._handle_class(node, file_defs)
 
             # --- 3. Handle Top-Level Functions ---
             elif isinstance(node, ast.FunctionDef):
-                if not node.name.startswith("_"):
-                    self.linter.track_doc(node)
-                    args = [self.get_arg_str(a) for a in node.args.args]
-                    ret = f" -> {ast.unparse(node.returns)}" if node.returns else ""
-                    file_defs.append(f"- def {node.name}({', '.join(args)}){ret}")
-                    file_defs.extend(self._format_docstring(node, 2))
+                self._handle_function(node, file_defs)
 
         if file_defs:
             self.definitions.append(f"### {rel_path}\n")
@@ -187,7 +194,7 @@ class Analyzer:
             # Mark as visited globally so future references are abbreviated
             globally_visited.add(file_node)
 
-            children = sorted(list(self.import_graph.get(file_node, [])))
+            children = sorted(self.import_graph.get(file_node, []))
             if children:
                 current_path.add(file_node)
                 for child in children:

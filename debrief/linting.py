@@ -1,7 +1,5 @@
 import ast
-import os
 import sys
-from pathlib import Path
 
 
 class ProjectLinter:
@@ -25,55 +23,14 @@ class ProjectLinter:
         print(f"{icon}  {msg}", file=sys.stderr)
 
     def find_readme(self):
-        min_readme_lines = 3
+        from debrief.resolve import resolve_readme
 
-        candidates = [
-            os.path.join(self.root, "README.md"),
-            os.path.join(self.root, "docs", "README.md"),
-            os.path.join(self.root, ".github", "README.md"),
-            os.path.join(self.root, "readme.md"),
-        ]
-        for path in candidates:
-            if not os.path.exists(path):
-                self.log("FAIL", "No README found! (Checked root, docs/, .github/)")
-                return None
-
-            rel = os.path.relpath(path, self.root)
-            text = Path(path).read_text()
-            lines = text.splitlines()
-
-            if not text.strip():
-                self.log("FAIL", f"README found at {rel} is empty!")
-                return None
-
-            if len(lines) < min_readme_lines:
-                self.log("WARN", f"{rel} is poor (less than {min_readme_lines} lines).")
-            else:
-                self.log("OK", f"Found README at {rel}")
-
-            return path
+        return resolve_readme(self.root)
 
     def check_metadata(self):
-        toml = os.path.join(self.root, "pyproject.toml")
-        if os.path.exists(toml):
-            try:
-                with open(toml, "r") as f:
-                    content = f.read()
-                    if (
-                        'description = ""' in content
-                        or "Add your description" in content
-                    ):
-                        self.log(
-                            "FAIL", "pyproject.toml has empty/default description."
-                        )
-                    else:
-                        self.log("OK", "Found pyproject.toml")
-            except Exception:
-                pass
-        elif not os.path.exists(os.path.join(self.root, "requirements.txt")):
-            self.log(
-                "WARN", "No dependencies found (no requirements.txt or pyproject.toml)."
-            )
+        from debrief.resolve import check_dependencies
+
+        check_dependencies(self.root)
 
     def track_doc(self, node):
         self.doc_stats["total"] += 1

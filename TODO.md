@@ -1,6 +1,6 @@
 # TODO
 
-- [ ] Create a new resolve.py module and move all the logic to resolve paths to it. These functions will be imported and used in both linting and BRIEF.md generation.
+- [x] Create a new resolve.py module and move all the logic to resolve paths to it. These functions will be imported and used in both linting and BRIEF.md generation.
   - Any functions that "fetch" from the project (eg. for getting the README.md file or the project dependencies), and any assumptions / deductions that are made to get there belong in this module.
   - These functions should try a reasonable set of conventions in the correct order, and warn if the target file is empty or missing, as well as if it has a default (unchanged) value.
   - For missing files, the error message should tell the user to ensure they are running the tool in the root of the project.

@@ -4,13 +4,12 @@ import os
 from debrief.analysis import Analyzer
 from debrief.ignore import load_gitignore
 from debrief.linting import ProjectLinter
+from debrief.resolve import resolve_readme, resolve_requirements
 from debrief.tree import get_adaptive_tree
 
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(
-        description="Generate a BRIEF.md file."
-    )
+    parser = argparse.ArgumentParser(description="Generate a BRIEF.md file.")
     parser.add_argument("path", nargs="?", default=".", help="Project root path")
     parser.add_argument("-o", "--output", default="BRIEF.md", help="Output filename")
 
@@ -39,7 +38,7 @@ def main():
     print(f"🔍 Scanning {root}...")
     linter = ProjectLinter(root)
 
-    readme_path = linter.find_readme()
+    readme_path = resolve_readme(root)
     linter.check_metadata()
 
     readme_content = "_README is empty or missing._"
@@ -51,8 +50,8 @@ def main():
                 readme_content += "\n... (truncated)"
 
     deps_content = "_No requirements.txt found._"
-    req_path = os.path.join(root, "requirements.txt")
-    if os.path.exists(req_path):
+    req_path = resolve_requirements(root)
+    if req_path:
         with open(req_path, "r") as f:
             lines = f.read().splitlines()
             deps_content = "\n".join(lines[: args.max_deps])
