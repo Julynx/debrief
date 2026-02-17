@@ -50,9 +50,15 @@ def parse_arguments():
     )
 
     parser.add_argument(
-        "--no-docstrings",
+        "--include-docstrings",
         action="store_true",
-        help="Omit docstrings from the output",
+        help="Include docstrings in the output",
+    )
+    parser.add_argument(
+        "--max-tree-siblings",
+        type=int,
+        default=None,
+        help="Max items at same level in tree (default: tree_budget/3)",
     )
 
     return parser.parse_args()
@@ -104,11 +110,16 @@ def main():
             link = f"file:///{abs_dep_path.replace(os.sep, '/')}"
             deps_content += f"\n... (truncated) [Read more]({link})"
 
-    tree_str = get_adaptive_tree(root, args.tree_budget, patterns)
+    max_tree_siblings = (
+        args.max_tree_siblings
+        if args.max_tree_siblings is not None
+        else max(1, args.tree_budget // 3)
+    )
+    tree_str = get_adaptive_tree(root, args.tree_budget, patterns, max_tree_siblings)
     tree_content = "\n".join([truncate_line(line) for line in tree_str.splitlines()])
 
     analyzer = Analyzer(
-        root, linter, patterns, include_docstrings=not args.no_docstrings
+        root, linter, patterns, include_docstrings=args.include_docstrings
     )
     analyzer.scan()
     linter.print_summary()

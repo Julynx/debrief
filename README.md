@@ -16,16 +16,17 @@ debrief [path] [--output BRIEF.md]
 
 ### Arguments
 
-| Argument            | Description                                | Default    |
-| :------------------ | :----------------------------------------- | :--------- |
-| `path`              | Project root path.                         | `.`        |
-| `-o`, `--output`    | Output filename.                           | `BRIEF.md` |
-| `--tree-budget`     | Max lines for Directory Tree (auto-depth). | `60`       |
-| `--max-readme`      | Max lines to include from README.          | `20`       |
-| `--max-deps`        | Max lines for dependencies list.           | `15`       |
-| `--max-imports`     | Max lines for Import Tree.                 | `50`       |
-| `--max-definitions` | Max lines for Module Definitions.          | `200`      |
-| `--no-docstrings`   | Omit docstrings from the output.           | `False`    |
+| Argument               | Description                                | Default         |
+| :--------------------- | :----------------------------------------- | :-------------- |
+| `path`                 | Project root path.                         | `.`             |
+| `-o`, `--output`       | Output filename.                           | `BRIEF.md`      |
+| `--tree-budget`        | Max lines for Directory Tree (auto-depth). | `60`            |
+| `--max-tree-siblings`  | Max items at same level in tree.           | `tree_budget/3` |
+| `--max-readme`         | Max lines to include from README.          | `20`            |
+| `--max-deps`           | Max lines for dependencies list.           | `15`            |
+| `--max-imports`        | Max lines for Import Tree.                 | `50`            |
+| `--max-definitions`    | Max lines for Module Definitions.          | `200`           |
+| `--include-docstrings` | Include docstrings in the output.          | `False`         |
 
 ## Features
 

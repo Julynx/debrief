@@ -5,13 +5,14 @@ import os
 from .ignore import is_ignored
 
 
-def generate_tree_at_depth(root_path, max_depth, patterns):
+def generate_tree_at_depth(root_path, max_depth, patterns, max_siblings=None):
     """Generates a directory tree string up to a specific depth.
 
     Args:
         root_path: The root directory to start the tree from.
         max_depth: The maximum depth to traverse.
         patterns: List of gitignore patterns to exclude.
+        max_siblings: Maximum number of items to show at each level.
 
     Returns:
         A string representing the directory tree.
@@ -35,8 +36,14 @@ def generate_tree_at_depth(root_path, max_depth, patterns):
             if not is_ignored(full_path, root_path, patterns):
                 filtered_items.append(item)
 
-        for index, item in enumerate(filtered_items):
-            is_last = index == len(filtered_items) - 1
+        items_to_show = filtered_items
+        hidden_count = 0
+        if max_siblings is not None and len(filtered_items) > max_siblings:
+            items_to_show = filtered_items[:max_siblings]
+            hidden_count = len(filtered_items) - max_siblings
+
+        for index, item in enumerate(items_to_show):
+            is_last = index == len(items_to_show) - 1 and hidden_count == 0
             prefix = "└── " if is_last else "├── "
             indent = "    " * current_depth
             lines.append(f"{indent}{prefix}{item}")
@@ -45,12 +52,16 @@ def generate_tree_at_depth(root_path, max_depth, patterns):
             if os.path.isdir(full):
                 walk(full, current_depth + 1)
 
+        if hidden_count > 0:
+            indent = "    " * current_depth
+            lines.append(f"{indent}└── ... ({hidden_count} more items hidden)")
+
     lines.append(os.path.basename(root_path) + "/")
     walk(root_path, 0)
     return "\n".join(lines)
 
 
-def get_adaptive_tree(root_path, max_lines, patterns):
+def get_adaptive_tree(root_path, max_lines, patterns, max_siblings=None):
     """Generates a directory tree that fits within a line budget.
 
     Iteratively increases depth until the tree exceeds max_lines,
@@ -60,6 +71,7 @@ def get_adaptive_tree(root_path, max_lines, patterns):
         root_path: The root directory.
         max_lines: The maximum number of lines allowed for the tree.
         patterns: List of gitignore patterns.
+        max_siblings: Maximum number of items to show at each level.
 
     Returns:
         The generated tree string.
@@ -67,7 +79,7 @@ def get_adaptive_tree(root_path, max_lines, patterns):
     best_tree = ""
     last_count = 0
     for depth in range(1, 10):
-        tree = generate_tree_at_depth(root_path, depth, patterns)
+        tree = generate_tree_at_depth(root_path, depth, patterns, max_siblings)
         count = len(tree.splitlines())
         if count > max_lines:
             if 0 < last_count < (max_lines * 0.2):
