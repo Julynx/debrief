@@ -3,6 +3,8 @@
 import argparse
 import logging
 import os
+import sys
+from pathlib import Path
 
 from debrief.analysis import Analyzer
 from debrief.ignore import load_gitignore
@@ -16,14 +18,24 @@ from debrief.resolve import (
 )
 from debrief.tree import get_adaptive_tree
 
+logger = logging.getLogger(__name__)
 
-def parse_arguments():
+
+def parse_arguments() -> argparse.Namespace:
     """Parses command-line arguments.
 
     Returns:
         argparse.Namespace: The parsed arguments.
     """
     parser = argparse.ArgumentParser(description="Generate a BRIEF.md file.")
+
+    parser.add_argument(
+        "mode",
+        nargs="?",
+        default="run",
+        choices=["run", "lint"],
+        help="Mode: 'run' generates BRIEF.md (default), 'lint' only runs checks",
+    )
     parser.add_argument("path", nargs="?", default=".", help="Project root path")
     parser.add_argument("-o", "--output", default="BRIEF.md", help="Output filename")
 
@@ -61,6 +73,18 @@ def parse_arguments():
         help="Max items at same level in tree (default: tree_budget/3)",
     )
     parser.add_argument(
+        "--max-class-methods",
+        type=int,
+        default=None,
+        help="Max public methods per class (default: max_definitions/3)",
+    )
+    parser.add_argument(
+        "--max-module-defs",
+        type=int,
+        default=None,
+        help="Max top-level defs per module (default: max_definitions/3)",
+    )
+    parser.add_argument(
         "--exclude",
         action="append",
         help="Additional patterns to exclude (can be used multiple times)",
@@ -69,7 +93,63 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def main():
+def _read_readme(root: str, max_lines: int) -> str:
+    """Reads the README file and returns its truncated content.
+
+    Args:
+        root: Absolute path to the project root.
+        max_lines: Maximum number of lines to include.
+
+    Returns:
+        The README content as a string.
+    """
+    readme_path = resolve_readme(root)
+    if not readme_path:
+        return "_README is empty or missing._"
+
+    try:
+        text = Path(readme_path).read_text(encoding="utf-8")
+    except Exception:
+        logger.debug("Could not read README at %s", readme_path, exc_info=True)
+        return "_README is empty or missing._"
+
+    lines = text.splitlines()
+    content = "\n".join([truncate_line(line) for line in lines[:max_lines]])
+    if len(lines) > max_lines:
+        link = f"file:///{readme_path.replace(os.sep, '/')}"
+        content += f"\n... (truncated) [Read more]({link})"
+    return content
+
+
+def _build_deps_content(root: str, max_deps: int) -> str:
+    """Builds the dependencies content string.
+
+    Args:
+        root: Absolute path to the project root.
+        max_deps: Maximum number of dependency lines to include.
+
+    Returns:
+        The dependencies content as a string.
+    """
+    deps = get_project_dependencies(root)
+    if not deps:
+        return "_No dependencies found._"
+
+    dep_file_path = (
+        "pyproject.toml"
+        if Path(root, "pyproject.toml").exists()
+        else "requirements.txt"
+    )
+    abs_dep_path = Path(root) / dep_file_path
+
+    content = "\n".join([truncate_line(dependency) for dependency in deps[:max_deps]])
+    if len(deps) > max_deps:
+        link = f"file:///{str(abs_dep_path).replace(os.sep, '/')}"
+        content += f"\n... (truncated) [Read more]({link})"
+    return content
+
+
+def main() -> None:
     """Main entry point for the debrief tool.
 
     Scans the project, resolves readme and requirements, generates a tree,
@@ -82,38 +162,38 @@ def main():
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     logging.info(f"🔍 Scanning {root}...")
-    linter = ProjectLinter(root)
 
-    readme_path = resolve_readme(root)
+    readme_content = _read_readme(root, args.max_readme)
+
+    linter = ProjectLinter(root, include_docstrings=args.include_docstrings)
     linter.check_metadata()
 
-    readme_content = "_README is empty or missing._"
-    if readme_path:
-        with open(readme_path, "r", encoding="utf-8") as readme_file:
-            lines = readme_file.read().splitlines()
-            readme_content = "\n".join(
-                [truncate_line(line) for line in lines[: args.max_readme]]
-            )
-            if len(lines) > args.max_readme:
-                link = f"file:///{readme_path.replace(os.sep, '/')}"
-                readme_content += f"\n... (truncated) [Read more]({link})"
+    max_class_methods = (
+        args.max_class_methods
+        if args.max_class_methods is not None
+        else max(1, args.max_definitions // 3)
+    )
+    max_module_defs = (
+        args.max_module_defs
+        if args.max_module_defs is not None
+        else max(1, args.max_definitions // 3)
+    )
 
-    deps_content = "_No dependencies found._"
-    deps = get_project_dependencies(root)
-    if deps:
-        dep_file_path = (
-            "pyproject.toml"
-            if os.path.exists(os.path.join(root, "pyproject.toml"))
-            else "requirements.txt"
-        )
-        abs_dep_path = os.path.join(root, dep_file_path)
+    analyzer = Analyzer(
+        root,
+        linter,
+        patterns,
+        include_docstrings=args.include_docstrings,
+        max_class_methods=max_class_methods,
+        max_module_defs=max_module_defs,
+    )
+    analyzer.scan()
+    linter.print_summary()
 
-        deps_content = "\n".join(
-            [truncate_line(dependency) for dependency in deps[: args.max_deps]]
-        )
-        if len(deps) > args.max_deps:
-            link = f"file:///{abs_dep_path.replace(os.sep, '/')}"
-            deps_content += f"\n... (truncated) [Read more]({link})"
+    if args.mode == "lint":
+        sys.exit(0)
+
+    deps_content = _build_deps_content(root, args.max_deps)
 
     max_tree_siblings = (
         args.max_tree_siblings
@@ -122,12 +202,6 @@ def main():
     )
     tree_str = get_adaptive_tree(root, args.tree_budget, patterns, max_tree_siblings)
     tree_content = "\n".join([truncate_line(line) for line in tree_str.splitlines()])
-
-    analyzer = Analyzer(
-        root, linter, patterns, include_docstrings=args.include_docstrings
-    )
-    analyzer.scan()
-    linter.print_summary()
 
     import_lines = analyzer.get_import_tree().splitlines()
     import_tree = "\n".join(
@@ -146,6 +220,7 @@ def main():
     )
     if len(split_defs) > args.max_definitions:
         definitions += "\n... (truncated)"
+
     description = get_project_description(root)
     display_description = f"> {description}" if description else ""
 

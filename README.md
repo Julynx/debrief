@@ -11,23 +11,40 @@ pip install debrief
 ## Usage
 
 ```bash
-debrief [path] [--output BRIEF.md]
+debrief [run|lint] [path] [--output BRIEF.md]
 ```
 
 ### Arguments
 
-| Argument               | Description                                | Default         |
-| :--------------------- | :----------------------------------------- | :-------------- |
-| `path`                 | Project root path.                         | `.`             |
-| `-o`, `--output`       | Output filename.                           | `BRIEF.md`      |
-| `--tree-budget`        | Max lines for Directory Tree (auto-depth). | `60`            |
-| `--max-tree-siblings`  | Max items at same level in tree.           | `tree_budget/3` |
-| `--max-readme`         | Max lines to include from README.          | `20`            |
-| `--max-deps`           | Max lines for dependencies list.           | `15`            |
-| `--max-imports`        | Max lines for Import Tree.                 | `50`            |
-| `--max-definitions`    | Max lines for Module Definitions.          | `200`           |
-| `--include-docstrings` | Include docstrings in the output.          | `False`         |
-| `--exclude`            | Additional patterns to exclude.            | None            |
+| Argument               | Description                                        | Default             |
+| :--------------------- | :------------------------------------------------- | :------------------ |
+| `mode`                 | `run` generates BRIEF.md, `lint` only runs checks. | `run`               |
+| `path`                 | Project root path.                                 | `.`                 |
+| `-o`, `--output`       | Output filename.                                   | `BRIEF.md`          |
+| `--tree-budget`        | Max lines for Directory Tree (auto-depth).         | `60`                |
+| `--max-tree-siblings`  | Max items at same level in tree.                   | `tree_budget/3`     |
+| `--max-readme`         | Max lines to include from README.                  | `20`                |
+| `--max-deps`           | Max lines for dependencies list.                   | `15`                |
+| `--max-imports`        | Max lines for Import Tree.                         | `50`                |
+| `--max-definitions`    | Max lines for Module Definitions.                  | `200`               |
+| `--max-class-methods`  | Max public methods shown per class.                | `max_definitions/3` |
+| `--max-module-defs`    | Max top-level defs shown per module.               | `max_definitions/3` |
+| `--include-docstrings` | Include docstrings in the output.                  | `False`             |
+| `--exclude`            | Additional patterns to exclude.                    | None                |
+
+### Lint Mode
+
+```bash
+debrief lint [path]
+```
+
+Runs all quality checks without generating `BRIEF.md`:
+
+| Check                  | Threshold         | Condition                        |
+| :--------------------- | :---------------- | :------------------------------- |
+| README non-empty lines | ≥ 2               | Always                           |
+| Description length     | ≥ 16 non-ws chars | Always                           |
+| Docstring length       | ≥ 16 non-ws chars | Only with `--include-docstrings` |
 
 ## Features
 

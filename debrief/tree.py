@@ -5,7 +5,12 @@ import os
 from .ignore import is_ignored
 
 
-def generate_tree_at_depth(root_path, max_depth, patterns, max_siblings=None):
+def generate_tree_at_depth(
+    root_path: str,
+    max_depth: int,
+    patterns: list[str],
+    max_siblings: int | None = None,
+) -> str:
     """Generates a directory tree string up to a specific depth.
 
     Args:
@@ -17,9 +22,9 @@ def generate_tree_at_depth(root_path, max_depth, patterns, max_siblings=None):
     Returns:
         A string representing the directory tree.
     """
-    lines = []
+    lines: list[str] = []
 
-    def walk(path, current_depth):
+    def walk(path: str, current_depth: int) -> None:
         if current_depth > max_depth:
             return
         try:
@@ -30,11 +35,11 @@ def generate_tree_at_depth(root_path, max_depth, patterns, max_siblings=None):
         items = sorted(
             items, key=lambda x: (not os.path.isdir(os.path.join(path, x)), x)
         )
-        filtered_items = []
-        for item in items:
-            full_path = os.path.join(path, item)
-            if not is_ignored(full_path, root_path, patterns):
-                filtered_items.append(item)
+        filtered_items = [
+            item
+            for item in items
+            if not is_ignored(os.path.join(path, item), root_path, patterns)
+        ]
 
         items_to_show = filtered_items
         hidden_count = 0
@@ -61,7 +66,12 @@ def generate_tree_at_depth(root_path, max_depth, patterns, max_siblings=None):
     return "\n".join(lines)
 
 
-def get_adaptive_tree(root_path, max_lines, patterns, max_siblings=None):
+def get_adaptive_tree(
+    root_path: str,
+    max_lines: int,
+    patterns: list[str],
+    max_siblings: int | None = None,
+) -> str:
     """Generates a directory tree that fits within a line budget.
 
     Iteratively increases depth until the tree exceeds max_lines,

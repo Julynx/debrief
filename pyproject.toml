@@ -1,6 +1,6 @@
 [project]
 name = "debrief"
-version = "0.8.3"
+version = "0.8.4"
 description = "Dynamically generated BRIEF.md summaries for your Python projects, to make them accessible to new contributors or coding agents."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -11,7 +11,11 @@ Repository = "https://github.com/Julynx/debrief"
 Homepage = "https://github.com/Julynx/debrief"
 
 [dependency-groups]
-dev = ["pylint>=4.0.4", "ruff>=0.15.1"]
+dev = [
+    "pylint>=4.0.4",
+    "pytest>=9.0.2",
+    "ruff>=0.15.1",
+]
 
 [build-system]
 requires = ["hatchling"]

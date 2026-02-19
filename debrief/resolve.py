@@ -1,10 +1,14 @@
 """Utilities for resolving project files and parsing metadata."""
 
 import logging
-import os
 import tomllib
+from functools import lru_cache
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
+
+from debrief.constants import MIN_DESCRIPTION_CHARS, MIN_README_LINES
+
+logger = logging.getLogger(__name__)
 
 
 def log(level: str, msg: str) -> None:
@@ -23,6 +27,27 @@ def log(level: str, msg: str) -> None:
         logging.info(f"{icon}  {msg}")
 
 
+@lru_cache(maxsize=16)
+def _load_pyproject(root: Path) -> Optional[dict]:
+    """Loads and caches the parsed pyproject.toml data.
+
+    Args:
+        root: Project root directory.
+
+    Returns:
+        The parsed TOML dictionary, or None on error.
+    """
+    toml_path = root / "pyproject.toml"
+    if not toml_path.exists():
+        return None
+    try:
+        data = tomllib.loads(toml_path.read_text(encoding="utf-8"))
+        return data
+    except Exception:
+        logger.debug("Failed to parse pyproject.toml", exc_info=True)
+        return None
+
+
 def resolve_readme(root: str) -> Optional[str]:
     """Finds the README file in the project looking at standard locations.
 
@@ -34,7 +59,7 @@ def resolve_readme(root: str) -> Optional[str]:
     Returns:
         Absolute path to README or None.
     """
-    min_readme_lines = 3
+    root_path = Path(root)
     candidates = [
         "README.md",
         "docs/README.md",
@@ -42,29 +67,33 @@ def resolve_readme(root: str) -> Optional[str]:
         "readme.md",
     ]
 
-    for rel_path in candidates:
-        abs_path = os.path.join(root, rel_path)
-        if os.path.exists(abs_path):
-            rel = os.path.relpath(abs_path, root)
+    for rel_name in candidates:
+        abs_path = root_path / rel_name
+        if abs_path.exists():
+            rel = abs_path.relative_to(root_path)
 
             try:
-                text = Path(abs_path).read_text(encoding="utf-8")
-            except Exception as e:
-                log("FAIL", f"Could not read {rel}: {e}")
+                text = abs_path.read_text(encoding="utf-8")
+            except Exception:
+                logger.debug("Could not read %s", rel, exc_info=True)
+                log("FAIL", f"Could not read {rel}")
                 continue
-
-            lines = text.splitlines()
 
             if not text.strip():
                 log("FAIL", f"README found at {rel} is empty!")
-                return abs_path
+                return str(abs_path)
 
-            if len(lines) < min_readme_lines:
-                log("WARN", f"{rel} is poor (less than {min_readme_lines} lines).")
+            non_empty_lines = [line for line in text.splitlines() if line.strip()]
+            if len(non_empty_lines) < MIN_README_LINES:
+                log(
+                    "WARN",
+                    f"{rel} is very short"
+                    f" (less than {MIN_README_LINES} non-empty lines).",
+                )
             else:
                 log("OK", f"Found README at {rel}")
 
-            return abs_path
+            return str(abs_path)
 
     log("FAIL", "No README found! (Checked root, docs/, .github/)")
     return None
@@ -79,18 +108,23 @@ def resolve_pyproject(root: str) -> Optional[str]:
     Returns:
         Absolute path to pyproject.toml or None.
     """
-    toml_path = os.path.join(root, "pyproject.toml")
-    if os.path.exists(toml_path):
-        try:
-            content = Path(toml_path).read_text(encoding="utf-8")
-            if 'description = ""' in content or "Add your description" in content:
-                log("FAIL", "pyproject.toml has empty/default description.")
-            else:
-                log("OK", "Found pyproject.toml")
-            return toml_path
-        except Exception:
-            return None
-    return None
+    root_path = Path(root)
+    toml_path = root_path / "pyproject.toml"
+    if not toml_path.exists():
+        return None
+
+    description = get_project_description(root)
+    if not description or not description.strip():
+        log("FAIL", "pyproject.toml has empty/missing description.")
+    elif len(description.replace(" ", "")) < MIN_DESCRIPTION_CHARS:
+        log(
+            "WARN",
+            f"pyproject.toml description is very short"
+            f" (less than {MIN_DESCRIPTION_CHARS} non-whitespace chars).",
+        )
+    else:
+        log("OK", "Found pyproject.toml")
+    return str(toml_path)
 
 
 def resolve_requirements(root: str) -> Optional[str]:
@@ -102,9 +136,9 @@ def resolve_requirements(root: str) -> Optional[str]:
     Returns:
         Absolute path to requirements.txt or None.
     """
-    req_path = os.path.join(root, "requirements.txt")
-    if os.path.exists(req_path):
-        return req_path
+    req_path = Path(root) / "requirements.txt"
+    if req_path.exists():
+        return str(req_path)
     return None
 
 
@@ -132,19 +166,13 @@ def get_project_description(root: str) -> Optional[str]:
     Returns:
         The project description string, or None if not found/error.
     """
-    toml_path = os.path.join(root, "pyproject.toml")
-    if not os.path.exists(toml_path):
+    data = _load_pyproject(Path(root))
+    if data is None:
         return None
-
-    try:
-        with open(toml_path, "rb") as toml_file:
-            data = tomllib.load(toml_file)
-            return data.get("project", {}).get("description")
-    except Exception:
-        return None
+    return data.get("project", {}).get("description")
 
 
-def get_project_dependencies(root: str) -> List[str]:
+def get_project_dependencies(root: str) -> list[str]:
     """Extracts project dependencies from pyproject.toml or requirements.txt.
 
     Args:
@@ -153,28 +181,22 @@ def get_project_dependencies(root: str) -> List[str]:
     Returns:
         A list of dependency strings.
     """
-    toml_path = os.path.join(root, "pyproject.toml")
-    if os.path.exists(toml_path):
-        try:
-            with open(toml_path, "rb") as toml_file:
-                data = tomllib.load(toml_file)
-                deps = data.get("project", {}).get("dependencies")
-                if isinstance(deps, list):
-                    return deps
-        except Exception:
-            pass
+    data = _load_pyproject(Path(root))
+    if data is not None:
+        deps = data.get("project", {}).get("dependencies")
+        if isinstance(deps, list):
+            return deps
 
-    req_path = os.path.join(root, "requirements.txt")
-    if os.path.exists(req_path):
+    req_path = Path(root) / "requirements.txt"
+    if req_path.exists():
         try:
-            with open(req_path, "r", encoding="utf-8") as requirements_file:
-                return [
-                    line.strip()
-                    for line in requirements_file
-                    if line.strip() and not line.startswith("#")
-                ]
+            return [
+                line.strip()
+                for line in req_path.read_text(encoding="utf-8").splitlines()
+                if line.strip() and not line.startswith("#")
+            ]
         except Exception:
-            pass
+            logger.debug("Failed to read requirements.txt", exc_info=True)
 
     return []
 

@@ -1,12 +1,18 @@
 """Handles gitignore pattern matching for file filtering."""
 
 import fnmatch
+import logging
 import os
+from pathlib import Path
 
 from .constants import DEFAULT_IGNORE
 
+logger = logging.getLogger(__name__)
 
-def load_gitignore(root_path, extra_patterns=None):
+
+def load_gitignore(
+    root_path: str, extra_patterns: list[str] | None = None
+) -> list[str]:
     """Loads the .gitignore file from the root path.
 
     Args:
@@ -14,25 +20,24 @@ def load_gitignore(root_path, extra_patterns=None):
         extra_patterns: Optional list of additional patterns to exclude.
 
     Returns:
-        List[str]: A list of patterns read from the .gitignore file.
+        A list of patterns read from the .gitignore file.
     """
     patterns = set(DEFAULT_IGNORE)
-    gitignore_path = os.path.join(root_path, ".gitignore")
-    if os.path.exists(gitignore_path):
+    gitignore_path = Path(root_path) / ".gitignore"
+    if gitignore_path.exists():
         try:
-            with open(gitignore_path, "r", encoding="utf-8") as gitignore_file:
-                for raw_line in gitignore_file:
-                    line = raw_line.strip()
-                    if line and not line.startswith("#"):
-                        patterns.add(line)
+            for raw_line in gitignore_path.read_text(encoding="utf-8").splitlines():
+                line = raw_line.strip()
+                if line and not line.startswith("#"):
+                    patterns.add(line)
         except Exception:
-            pass
+            logger.debug("Failed to read .gitignore", exc_info=True)
     if extra_patterns:
         patterns.update(extra_patterns)
     return list(patterns)
 
 
-def is_ignored(path, root_path, patterns):
+def is_ignored(path: str, root_path: str, patterns: list[str]) -> bool:
     """Checks if a file path matches any of the ignore patterns.
 
     Args:
