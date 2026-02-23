@@ -54,7 +54,7 @@ def test_short_description_warns(project_directory, caplog):
 
 
 def test_default_description(project_directory, caplog):
-    """Verifies that a warning is logged for the default uv description."""
+    """Verifies that a warning is logged for the default description."""
     toml_path = project_directory / "pyproject.toml"
     toml_path.write_text(
         '[project]\nname = "test-project"\nversion = "0.1.0"\n'
@@ -63,7 +63,7 @@ def test_default_description(project_directory, caplog):
     )
 
     resolve_pyproject(str(project_directory))
-    assert "pyproject.toml has the default uv description" in caplog.text
+    assert "pyproject.toml has the default description." in caplog.text
 
 
 def test_valid_description_passes(project_directory, caplog):

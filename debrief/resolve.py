@@ -121,7 +121,7 @@ def resolve_pyproject(root: str) -> Optional[str]:
     if not description or not description.strip():
         log("FAIL", "pyproject.toml has empty/missing description.")
     elif description.strip() == DEFAULT_DESCRIPTION:
-        log("WARN", "pyproject.toml has the default uv description.")
+        log("WARN", "pyproject.toml has the default description.")
     elif len(description.replace(" ", "")) < MIN_DESCRIPTION_CHARS:
         log(
             "WARN",
