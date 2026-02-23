@@ -6,7 +6,11 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
-from debrief.constants import MIN_DESCRIPTION_CHARS, MIN_README_LINES
+from debrief.constants import (
+    DEFAULT_DESCRIPTION,
+    MIN_DESCRIPTION_CHARS,
+    MIN_README_LINES,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +120,8 @@ def resolve_pyproject(root: str) -> Optional[str]:
     description = get_project_description(root)
     if not description or not description.strip():
         log("FAIL", "pyproject.toml has empty/missing description.")
+    elif description.strip() == DEFAULT_DESCRIPTION:
+        log("WARN", "pyproject.toml has the default uv description.")
     elif len(description.replace(" ", "")) < MIN_DESCRIPTION_CHARS:
         log(
             "WARN",
